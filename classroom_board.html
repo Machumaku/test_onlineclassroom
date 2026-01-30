@@ -1,0 +1,1923 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>학급 게시판</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            padding: 20px;
+            padding-top: 80px;
+            background-color: #f5f5f5;
+        }
+        
+        /* 상단 고정 헤더 */
+        .top-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background-color: white;
+            padding: 15px 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            z-index: 3000;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        /* 로그인/등록 버튼 */
+        .auth-btn {
+            background-color: #4682B4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .auth-btn:hover {
+            background-color: #36648B;
+        }
+        
+        /* 환영 메시지 */
+        .welcome-message {
+            font-size: 14px;
+            color: #333;
+            font-weight: bold;
+        }
+        
+        /* 선생님 전용 버튼들 */
+        .teacher-only {
+            display: none;
+        }
+        
+        .teacher-only.active {
+            display: inline-block;
+        }
+        
+        .header-container {
+            background-color: #87CEEB;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 20px;
+            position: relative;
+            min-height: 150px;
+            border: 2px dashed transparent;
+            transition: border-color 0.3s;
+        }
+        
+        .header-container:hover {
+            border-color: #4682B4;
+        }
+        
+        .text-content {
+            font-size: 50px;
+            color: #333;
+            font-family: 'Malgun Gothic', sans-serif;
+            font-weight: bold;
+            text-align: center;
+            min-height: 50px;
+            padding: 10px;
+            pointer-events: none;
+            user-select: none;
+        }
+        
+        .controls {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: none;
+            position: relative;
+        }
+        
+        .controls.active {
+            display: block;
+        }
+        
+        .close-settings {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #ff6b6b;
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            line-height: 1;
+        }
+        
+        .close-settings:hover {
+            background-color: #ee5a52;
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .control-group label {
+            font-weight: bold;
+            min-width: 100px;
+        }
+        
+        input[type="number"],
+        input[type="color"],
+        select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        input[type="number"] {
+            width: 100px;
+        }
+        
+        select {
+            min-width: 150px;
+        }
+        
+        button {
+            background-color: #4682B4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #36648B;
+        }
+        
+        .resize-hint {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            font-size: 11px;
+            color: rgba(0,0,0,0.3);
+            pointer-events: none;
+        }
+        
+        .settings-toggle {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background-color: rgba(255,255,255,0.8);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 10;
+        }
+        
+        .settings-toggle:hover {
+            background-color: rgba(255,255,255,1);
+            transform: scale(1.1);
+        }
+        
+        .settings-icon {
+            font-size: 20px;
+            color: #666;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #4682B4;
+            border-bottom: 2px solid #4682B4;
+            padding-bottom: 5px;
+        }
+        
+        /* 톱니바퀴 선생님 전용 */
+        .settings-toggle.teacher-only {
+            display: none;
+        }
+        
+        .settings-toggle.teacher-only.active {
+            display: flex;
+        }
+        
+        /* 모달 배경 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+        }
+        
+        /* 키패드 모달 */
+        .keypad-modal {
+            background-color: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 300px;
+        }
+        
+        .keypad-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .password-display {
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 24px;
+            letter-spacing: 10px;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .password-display .dot {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: #ddd;
+            margin: 0 5px;
+        }
+        
+        .password-display .dot.filled {
+            background-color: #333;
+        }
+        
+        .keypad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .keypad-btn {
+            background-color: #4682B4;
+            color: white;
+            border: none;
+            padding: 20px;
+            border-radius: 8px;
+            font-size: 24px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .keypad-btn:hover {
+            background-color: #36648B;
+        }
+        
+        .keypad-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .keypad-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .keypad-action-btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .clear-btn {
+            background-color: #ff6b6b;
+            color: white;
+        }
+        
+        .clear-btn:hover {
+            background-color: #ee5a52;
+        }
+        
+        .cancel-btn {
+            background-color: #95a5a6;
+            color: white;
+        }
+        
+        .cancel-btn:hover {
+            background-color: #7f8c8d;
+        }
+        
+        .error-message {
+            color: #ff6b6b;
+            font-size: 14px;
+            margin-top: 10px;
+            min-height: 20px;
+        }
+        
+        /* 비밀번호 설정 모달 */
+        .password-settings-modal {
+            background-color: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            max-width: 400px;
+            width: 90%;
+        }
+        
+        .modal-title {
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 25px;
+            color: #333;
+            text-align: center;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        
+        .input-group input:focus {
+            outline: none;
+            border-color: #4682B4;
+        }
+        
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+        }
+        
+        .modal-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .apply-btn {
+            background-color: #4682B4;
+            color: white;
+        }
+        
+        .apply-btn:hover {
+            background-color: #36648B;
+        }
+        
+        /* 로그인/등록 모달 */
+        .auth-modal {
+            background-color: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            max-width: 400px;
+            width: 90%;
+        }
+        
+        /* 학생 목록 모달 */
+        .student-list-modal {
+            background-color: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .student-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .student-info {
+            flex: 1;
+        }
+        
+        .student-info strong {
+            margin-right: 10px;
+        }
+        
+        .delete-btn {
+            background-color: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        
+        .delete-btn:hover {
+            background-color: #ee5a52;
+        }
+        
+        /* 알림 모달 */
+        .notification-modal {
+            background-color: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .notification-item {
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            background-color: #f9f9f9;
+        }
+        
+        .notification-info {
+            margin-bottom: 10px;
+        }
+        
+        .notification-info p {
+            margin: 5px 0;
+        }
+        
+        .notification-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .approve-btn {
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            flex: 1;
+        }
+        
+        .approve-btn:hover {
+            background-color: #45a049;
+        }
+        
+        .reject-btn {
+            background-color: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            flex: 1;
+        }
+        
+        .reject-btn:hover {
+            background-color: #ee5a52;
+        }
+        
+        .empty-message {
+            text-align: center;
+            color: #999;
+            padding: 30px;
+        }
+        
+        .notification-badge {
+            background-color: #ff6b6b;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 8px;
+            font-size: 12px;
+            margin-left: 5px;
+            font-weight: bold;
+        }
+        
+        /* 출석 체크 박스 */
+        .attendance-container {
+            background-color: #d3d3d3;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 20px;
+            position: relative;
+            min-height: 300px;
+            border: 2px dashed transparent;
+            transition: border-color 0.3s;
+        }
+        
+        .attendance-container:hover {
+            border-color: #999;
+        }
+        
+        .attendance-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .attendance-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: #4682B4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        .attendance-button:hover {
+            background-color: #36648B;
+        }
+        
+        .attendance-list {
+            margin-top: 50px;
+        }
+        
+        .attendance-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid #bbb;
+        }
+        
+        .attendance-info {
+            text-align: left;
+        }
+        
+        .attendance-checkbox {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        
+        /* 출석 설정 모달 */
+        .attendance-settings-modal {
+            background-color: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            max-width: 400px;
+            width: 90%;
+        }
+    </style>
+</head>
+<body>
+    <!-- 상단 고정 헤더 -->
+    <div class="top-header">
+        <button class="auth-btn" id="loginBtn" onclick="openLogin()">로그인</button>
+        <button class="auth-btn" id="registerBtn" onclick="openRegister()">사용자 등록</button>
+        <span class="welcome-message" id="welcomeMessage" style="display: none;"></span>
+        <button class="auth-btn teacher-only" id="studentListBtn" onclick="openStudentList()">👥 우리 반 학생</button>
+        <button class="auth-btn teacher-only" id="passwordSettingsBtn" onclick="openPasswordSettings()">🔒 비밀번호 설정</button>
+        <button class="auth-btn teacher-only" id="notificationBtn" onclick="openNotifications()">🔔 알림<span class="notification-badge" id="notificationBadge" style="display: none;">0</span></button>
+        <button class="auth-btn" id="logoutBtn" onclick="logout()" style="display: none;">로그아웃</button>
+    </div>
+    
+    <div class="controls">
+        <button class="close-settings" onclick="closeSettings()">✕</button>
+        <div class="section-title">📝 텍스트 스타일 설정</div>
+        
+        <div class="control-group">
+            <label>텍스트 내용:</label>
+            <input type="text" id="textInput" value="3학년 온라인 교실에 온 것을 환영합니다" placeholder="텍스트를 입력하세요" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+        </div>
+        
+        <div class="control-group">
+            <label>글꼴:</label>
+            <select id="fontFamily">
+                <option value="'Malgun Gothic', sans-serif" selected>맑은 고딕</option>
+                <option value="'Nanum Gothic', sans-serif">나눔고딕</option>
+                <option value="'Noto Sans KR', sans-serif">Noto Sans KR</option>
+                <option value="Arial, sans-serif">Arial</option>
+                <option value="'Times New Roman', serif">Times New Roman</option>
+                <option value="'Courier New', monospace">Courier New</option>
+                <option value="'Comic Sans MS', cursive">Comic Sans MS</option>
+            </select>
+        </div>
+        
+        <div class="control-group">
+            <label>텍스트 크기:</label>
+            <input type="number" id="fontSize" value="50" min="10" max="100">
+            <span>px</span>
+        </div>
+        
+        <div class="control-group">
+            <label>텍스트 색상:</label>
+            <input type="color" id="textColor" value="#333333">
+        </div>
+        
+        <div class="control-group">
+            <label>정렬:</label>
+            <select id="textAlign">
+                <option value="left">왼쪽</option>
+                <option value="center" selected>가운데</option>
+                <option value="right">오른쪽</option>
+            </select>
+        </div>
+        
+        <div class="control-group">
+            <label>굵기:</label>
+            <select id="fontWeight">
+                <option value="normal">보통</option>
+                <option value="bold" selected>굵게</option>
+            </select>
+        </div>
+        
+        <div class="control-group">
+            <label>박스 너비:</label>
+            <input type="number" id="boxWidth" value="100" min="50" max="100">
+            <span>%</span>
+        </div>
+        
+        <div class="control-group">
+            <label>박스 높이:</label>
+            <input type="number" id="boxHeight" value="150" min="100" max="500">
+            <span>px</span>
+        </div>
+        
+        <div class="control-group">
+            <label>배경색:</label>
+            <input type="color" id="bgColor" value="#87CEEB">
+        </div>
+        
+        <div class="control-group">
+            <button onclick="resetStyles()">기본값으로 초기화</button>
+        </div>
+    </div>
+    
+    <div class="header-container" id="headerBox">
+        <div class="text-content" id="textBox" style="font-size: 50px; text-align: center; font-weight: bold; font-family: 'Malgun Gothic', sans-serif;">
+            3학년 온라인 교실에 온 것을 환영합니다
+        </div>
+        <button class="settings-toggle teacher-only" onclick="toggleSettings()" title="설정">
+            <span class="settings-icon">⚙️</span>
+        </button>
+    </div>
+
+    <!-- 키패드 모달 -->
+    <div class="modal-overlay" id="keypadOverlay">
+        <div class="keypad-modal">
+            <div class="keypad-title">비밀번호 입력</div>
+            <div class="password-display" id="passwordDisplay">
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+            </div>
+            <div class="keypad">
+                <button class="keypad-btn" onclick="addDigit('1')">1</button>
+                <button class="keypad-btn" onclick="addDigit('2')">2</button>
+                <button class="keypad-btn" onclick="addDigit('3')">3</button>
+                <button class="keypad-btn" onclick="addDigit('4')">4</button>
+                <button class="keypad-btn" onclick="addDigit('5')">5</button>
+                <button class="keypad-btn" onclick="addDigit('6')">6</button>
+                <button class="keypad-btn" onclick="addDigit('7')">7</button>
+                <button class="keypad-btn" onclick="addDigit('8')">8</button>
+                <button class="keypad-btn" onclick="addDigit('9')">9</button>
+                <button class="keypad-btn" onclick="addDigit('0')" style="grid-column: 2;">0</button>
+            </div>
+            <div class="keypad-actions">
+                <button class="keypad-action-btn clear-btn" onclick="clearPassword()">지우기</button>
+                <button class="keypad-action-btn cancel-btn" onclick="closeKeypad()">취소</button>
+            </div>
+            <div class="error-message" id="errorMessage"></div>
+        </div>
+    </div>
+
+    <!-- 출석 체크 박스 -->
+    <div class="attendance-container" id="attendanceBox">
+        <div class="attendance-title">📋 출석 체크</div>
+        <button class="attendance-button" onclick="checkAttendance()">출석하기</button>
+        <button class="settings-toggle teacher-only" onclick="toggleAttendanceSettings()" title="설정" style="bottom: 10px; right: 10px;">
+            <span class="settings-icon">⚙️</span>
+        </button>
+        <div class="attendance-list" id="attendanceList">
+            <!-- 학생 목록이 여기 표시됩니다 -->
+        </div>
+    </div>
+
+    <!-- 출석 설정 키패드 모달 -->
+    <div class="modal-overlay" id="attendanceKeypadOverlay">
+        <div class="keypad-modal">
+            <div class="keypad-title">비밀번호 입력</div>
+            <div class="password-display" id="attendancePasswordDisplay">
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+            </div>
+            <div class="keypad">
+                <button class="keypad-btn" onclick="addAttendanceDigit('1')">1</button>
+                <button class="keypad-btn" onclick="addAttendanceDigit('2')">2</button>
+                <button class="keypad-btn" onclick="addAttendanceDigit('3')">3</button>
+                <button class="keypad-btn" onclick="addAttendanceDigit('4')">4</button>
+                <button class="keypad-btn" onclick="addAttendanceDigit('5')">5</button>
+                <button class="keypad-btn" onclick="addAttendanceDigit('6')">6</button>
+                <button class="keypad-btn" onclick="addAttendanceDigit('7')">7</button>
+                <button class="keypad-btn" onclick="addAttendanceDigit('8')">8</button>
+                <button class="keypad-btn" onclick="addAttendanceDigit('9')">9</button>
+                <button class="keypad-btn" onclick="addAttendanceDigit('0')" style="grid-column: 2;">0</button>
+            </div>
+            <div class="keypad-actions">
+                <button class="keypad-action-btn clear-btn" onclick="clearAttendancePassword()">지우기</button>
+                <button class="keypad-action-btn cancel-btn" onclick="closeAttendanceKeypad()">취소</button>
+            </div>
+            <div class="error-message" id="attendanceErrorMessage"></div>
+        </div>
+    </div>
+
+    <!-- 출석 설정 모달 -->
+    <div class="modal-overlay" id="attendanceSettingsOverlay">
+        <div class="attendance-settings-modal">
+            <div class="modal-title">⚙️ 출석 박스 설정</div>
+            <div class="input-group">
+                <label>박스 너비:</label>
+                <input type="number" id="attendanceWidth" value="100" min="50" max="100">
+                <span>%</span>
+            </div>
+            <div class="input-group">
+                <label>박스 높이:</label>
+                <input type="number" id="attendanceHeight" value="300" min="200" max="800">
+                <span>px</span>
+            </div>
+            <div class="input-group">
+                <label>배경색:</label>
+                <input type="color" id="attendanceBgColor" value="#d3d3d3">
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn cancel-btn" onclick="closeAttendanceSettings()">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 비밀번호 설정 모달 -->
+    <div class="modal-overlay" id="passwordSettingsOverlay">
+        <div class="password-settings-modal">
+            <div class="modal-title">🔒 비밀번호 설정</div>
+            <div class="input-group">
+                <label for="currentPassword">현재 비밀번호</label>
+                <input type="password" id="currentPassword" maxlength="4" placeholder="현재 비밀번호 4자리">
+            </div>
+            <div class="input-group">
+                <label for="newPassword">새 비밀번호</label>
+                <input type="password" id="newPassword" maxlength="4" placeholder="새 비밀번호 4자리">
+            </div>
+            <div class="input-group">
+                <label for="confirmPassword">새 비밀번호 확인</label>
+                <input type="password" id="confirmPassword" maxlength="4" placeholder="새 비밀번호 확인">
+            </div>
+            <div class="error-message" id="settingsErrorMessage"></div>
+            <div class="modal-actions">
+                <button class="modal-btn cancel-btn" onclick="closePasswordSettings()">취소</button>
+                <button class="modal-btn apply-btn" onclick="changePassword()">적용</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 로그인 모달 -->
+    <div class="modal-overlay" id="loginOverlay">
+        <div class="auth-modal">
+            <div class="modal-title">로그인</div>
+            <div class="input-group">
+                <label for="loginStudentId">학번</label>
+                <input type="text" id="loginStudentId" placeholder="학번">
+            </div>
+            <div class="input-group">
+                <label for="loginName">이름</label>
+                <input type="text" id="loginName" placeholder="이름">
+            </div>
+            <div class="input-group">
+                <label for="loginPassword">비밀번호</label>
+                <input type="password" id="loginPassword" placeholder="비밀번호">
+            </div>
+            <div class="error-message" id="loginErrorMessage"></div>
+            <div class="modal-actions">
+                <button class="modal-btn cancel-btn" onclick="closeLogin()">취소</button>
+                <button class="modal-btn apply-btn" onclick="login()">로그인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 사용자 등록 모달 -->
+    <div class="modal-overlay" id="registerOverlay">
+        <div class="auth-modal">
+            <div class="modal-title">사용자 등록</div>
+            <div class="input-group">
+                <label for="regStudentId">학번</label>
+                <input type="text" id="regStudentId" placeholder="학번">
+            </div>
+            <div class="input-group">
+                <label for="regName">이름</label>
+                <input type="text" id="regName" placeholder="이름">
+            </div>
+            <div class="input-group">
+                <label for="regPhone">전화번호</label>
+                <input type="text" id="regPhone" placeholder="전화번호 (예: 010-1234-5678)">
+            </div>
+            <div class="input-group">
+                <label for="regPassword">비밀번호</label>
+                <input type="password" id="regPassword" placeholder="비밀번호">
+            </div>
+            <div class="input-group">
+                <label for="regConfirmPassword">비밀번호 확인</label>
+                <input type="password" id="regConfirmPassword" placeholder="비밀번호 확인">
+            </div>
+            <div class="error-message" id="registerErrorMessage"></div>
+            <div class="modal-actions">
+                <button class="modal-btn cancel-btn" onclick="closeRegister()">취소</button>
+                <button class="modal-btn apply-btn" onclick="register()">신청하기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 우리 반 학생 모달 -->
+    <div class="modal-overlay" id="studentListOverlay">
+        <div class="student-list-modal">
+            <div class="modal-title">👥 우리 반 학생</div>
+            <div id="studentListContent"></div>
+            <div class="modal-actions" style="margin-top: 20px;">
+                <button class="modal-btn cancel-btn" onclick="closeStudentList()">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 알림 모달 -->
+    <div class="modal-overlay" id="notificationOverlay">
+        <div class="notification-modal">
+            <div class="modal-title">🔔 가입 신청 알림</div>
+            <div id="notificationContent"></div>
+            <div class="modal-actions" style="margin-top: 20px;">
+                <button class="modal-btn cancel-btn" onclick="closeNotifications()">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const textBox = document.getElementById('textBox');
+        const headerBox = document.getElementById('headerBox');
+        const controls = document.querySelector('.controls');
+        const fontFamily = document.getElementById('fontFamily');
+        const fontSize = document.getElementById('fontSize');
+        const textColor = document.getElementById('textColor');
+        const textAlign = document.getElementById('textAlign');
+        const fontWeight = document.getElementById('fontWeight');
+        const boxWidth = document.getElementById('boxWidth');
+        const boxHeight = document.getElementById('boxHeight');
+        const bgColor = document.getElementById('bgColor');
+        const textInput = document.getElementById('textInput');
+        
+        // 비밀번호 관련 변수
+        let currentPasswordInput = '';
+        let attendancePasswordInput = '';
+        let savedPassword = '0000'; // 초기 비밀번호
+        
+        // 사용자 관리
+        let currentUser = null;
+        let registeredUsers = [
+            {
+                studentId: '2026',
+                name: '이형균',
+                phone: '',
+                password: '0813',
+                isTeacher: true
+            }
+        ];
+        let pendingRegistrations = [];
+        let attendanceChecks = {}; // 출석 체크 상태 {studentId: true/false}
+        
+        // 페이지 로드 시 UI 업데이트
+        updateUI();
+        updateAttendanceList();
+        
+        // 텍스트 입력 이벤트
+        textInput.addEventListener('input', function() {
+            textBox.textContent = this.value || '여기에 텍스트를 입력하세요';
+        });
+        
+        // 설정창 닫기
+        function closeSettings() {
+            controls.classList.remove('active');
+        }
+        
+        function updateUI() {
+            const loginBtn = document.getElementById('loginBtn');
+            const registerBtn = document.getElementById('registerBtn');
+            const welcomeMessage = document.getElementById('welcomeMessage');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const teacherButtons = document.querySelectorAll('.teacher-only');
+            
+            if (currentUser) {
+                // 로그인 상태
+                loginBtn.style.display = 'none';
+                registerBtn.style.display = 'none';
+                welcomeMessage.style.display = 'inline';
+                welcomeMessage.textContent = `${currentUser.name}님 환영합니다.`;
+                logoutBtn.style.display = 'inline-block';
+                
+                // 선생님인 경우
+                if (currentUser.isTeacher) {
+                    teacherButtons.forEach(btn => btn.classList.add('active'));
+                    updateNotificationBadge();
+                }
+            } else {
+                // 로그아웃 상태
+                loginBtn.style.display = 'inline-block';
+                registerBtn.style.display = 'inline-block';
+                welcomeMessage.style.display = 'none';
+                logoutBtn.style.display = 'none';
+                teacherButtons.forEach(btn => btn.classList.remove('active'));
+            }
+        }
+        
+        // 로그아웃
+        function logout() {
+            if (confirm('로그아웃 하시겠습니까?')) {
+                currentUser = null;
+                updateUI();
+                // 설정창이 열려있으면 닫기
+                controls.classList.remove('active');
+            }
+        }
+        
+        // 로그인 모달
+        function openLogin() {
+            document.getElementById('loginOverlay').classList.add('active');
+            document.getElementById('loginStudentId').value = '';
+            document.getElementById('loginName').value = '';
+            document.getElementById('loginPassword').value = '';
+            document.getElementById('loginErrorMessage').textContent = '';
+        }
+        
+        function closeLogin() {
+            document.getElementById('loginOverlay').classList.remove('active');
+        }
+        
+        function login() {
+            const studentId = document.getElementById('loginStudentId').value.trim();
+            const name = document.getElementById('loginName').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const errorMsg = document.getElementById('loginErrorMessage');
+            
+            if (!studentId || !name || !password) {
+                errorMsg.textContent = '모든 항목을 입력해주세요.';
+                return;
+            }
+            
+            const user = registeredUsers.find(u => 
+                u.studentId === studentId && 
+                u.name === name && 
+                u.password === password
+            );
+            
+            if (user) {
+                currentUser = user;
+                closeLogin();
+                updateUI();
+            } else {
+                errorMsg.textContent = '학번, 이름 또는 비밀번호가 일치하지 않습니다.';
+            }
+        }
+        
+        // 사용자 등록 모달
+        function openRegister() {
+            document.getElementById('registerOverlay').classList.add('active');
+            document.getElementById('regStudentId').value = '';
+            document.getElementById('regName').value = '';
+            document.getElementById('regPhone').value = '';
+            document.getElementById('regPassword').value = '';
+            document.getElementById('regConfirmPassword').value = '';
+            document.getElementById('registerErrorMessage').textContent = '';
+        }
+        
+        function closeRegister() {
+            document.getElementById('registerOverlay').classList.remove('active');
+        }
+        
+        function register() {
+            const studentId = document.getElementById('regStudentId').value.trim();
+            const name = document.getElementById('regName').value.trim();
+            const phone = document.getElementById('regPhone').value.trim();
+            const password = document.getElementById('regPassword').value;
+            const confirmPassword = document.getElementById('regConfirmPassword').value;
+            const errorMsg = document.getElementById('registerErrorMessage');
+            
+            if (!studentId || !name || !phone || !password || !confirmPassword) {
+                errorMsg.textContent = '모든 항목을 입력해주세요.';
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                errorMsg.textContent = '비밀번호가 일치하지 않습니다.';
+                return;
+            }
+            
+            // 중복 확인
+            if (registeredUsers.some(u => u.studentId === studentId)) {
+                errorMsg.textContent = '이미 등록된 학번입니다.';
+                return;
+            }
+            
+            if (pendingRegistrations.some(u => u.studentId === studentId)) {
+                errorMsg.textContent = '이미 신청 중인 학번입니다.';
+                return;
+            }
+            
+            // 대기 목록에 추가
+            pendingRegistrations.push({
+                studentId,
+                name,
+                phone,
+                password
+            });
+            
+            updateNotificationBadge();
+            
+            errorMsg.style.color = '#4caf50';
+            errorMsg.textContent = '신청이 완료되었습니다. 승인을 기다려주세요.';
+            
+            setTimeout(() => {
+                closeRegister();
+                errorMsg.style.color = '#ff6b6b';
+            }, 2000);
+        }
+        
+        // 학생 목록 모달
+        function openStudentList() {
+            const content = document.getElementById('studentListContent');
+            
+            if (registeredUsers.length === 0) {
+                content.innerHTML = '<div class="empty-message">등록된 학생이 없습니다.</div>';
+            } else {
+                content.innerHTML = registeredUsers.map(user => `
+                    <div class="student-item">
+                        <div class="student-info">
+                            <strong>학번:</strong> ${user.studentId} 
+                            <strong>이름:</strong> ${user.name}
+                            ${user.isTeacher ? ' <span style="color: #4682B4; font-weight: bold;">(담임)</span>' : ''}
+                        </div>
+                        ${!user.isTeacher ? `<button class="delete-btn" onclick="deleteStudent('${user.studentId}')">삭제</button>` : ''}
+                    </div>
+                `).join('');
+            }
+            
+            document.getElementById('studentListOverlay').classList.add('active');
+        }
+        
+        function closeStudentList() {
+            document.getElementById('studentListOverlay').classList.remove('active');
+        }
+        
+        function deleteStudent(studentId) {
+            if (confirm('정말 이 학생을 삭제하시겠습니까?')) {
+                registeredUsers = registeredUsers.filter(u => u.studentId !== studentId);
+                // 목록 새로고침
+                const content = document.getElementById('studentListContent');
+                if (registeredUsers.length === 0) {
+                    content.innerHTML = '<div class="empty-message">등록된 학생이 없습니다.</div>';
+                } else {
+                    content.innerHTML = registeredUsers.map(user => `
+                        <div class="student-item">
+                            <div class="student-info">
+                                <strong>학번:</strong> ${user.studentId} 
+                                <strong>이름:</strong> ${user.name}
+                                ${user.isTeacher ? ' <span style="color: #4682B4; font-weight: bold;">(담임)</span>' : ''}
+                            </div>
+                            ${!user.isTeacher ? `<button class="delete-btn" onclick="deleteStudent('${user.studentId}')">삭제</button>` : ''}
+                        </div>
+                    `).join('');
+                }
+            }
+        }
+        
+        // 알림 모달
+        function openNotifications() {
+            const content = document.getElementById('notificationContent');
+            
+            if (pendingRegistrations.length === 0) {
+                content.innerHTML = '<div class="empty-message">새로운 신청이 없습니다.</div>';
+            } else {
+                content.innerHTML = pendingRegistrations.map((user, index) => `
+                    <div class="notification-item">
+                        <div class="notification-info">
+                            <p><strong>학번:</strong> ${user.studentId}</p>
+                            <p><strong>이름:</strong> ${user.name}</p>
+                            <p><strong>전화번호:</strong> ${user.phone}</p>
+                        </div>
+                        <div class="notification-actions">
+                            <button class="approve-btn" onclick="approveRegistration(${index})">승인</button>
+                            <button class="reject-btn" onclick="rejectRegistration(${index})">거절</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            document.getElementById('notificationOverlay').classList.add('active');
+        }
+        
+        function closeNotifications() {
+            document.getElementById('notificationOverlay').classList.remove('active');
+        }
+        
+        function approveRegistration(index) {
+            const user = pendingRegistrations[index];
+            registeredUsers.push({
+                studentId: user.studentId,
+                name: user.name,
+                phone: user.phone,
+                password: user.password,
+                isTeacher: false
+            });
+            pendingRegistrations.splice(index, 1);
+            updateNotificationBadge();
+            updateAttendanceList(); // 출석 목록 즉시 업데이트
+            // 목록 새로고침
+            const content = document.getElementById('notificationContent');
+            if (pendingRegistrations.length === 0) {
+                content.innerHTML = '<div class="empty-message">새로운 신청이 없습니다.</div>';
+            } else {
+                content.innerHTML = pendingRegistrations.map((user, idx) => `
+                    <div class="notification-item">
+                        <div class="notification-info">
+                            <p><strong>학번:</strong> ${user.studentId}</p>
+                            <p><strong>이름:</strong> ${user.name}</p>
+                            <p><strong>전화번호:</strong> ${user.phone}</p>
+                        </div>
+                        <div class="notification-actions">
+                            <button class="approve-btn" onclick="approveRegistration(${idx})">승인</button>
+                            <button class="reject-btn" onclick="rejectRegistration(${idx})">거절</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+        
+        function rejectRegistration(index) {
+            if (confirm('이 신청을 거절하시겠습니까?')) {
+                pendingRegistrations.splice(index, 1);
+                updateNotificationBadge();
+                // 목록 새로고침
+                const content = document.getElementById('notificationContent');
+                if (pendingRegistrations.length === 0) {
+                    content.innerHTML = '<div class="empty-message">새로운 신청이 없습니다.</div>';
+                } else {
+                    content.innerHTML = pendingRegistrations.map((user, idx) => `
+                        <div class="notification-item">
+                            <div class="notification-info">
+                                <p><strong>학번:</strong> ${user.studentId}</p>
+                                <p><strong>이름:</strong> ${user.name}</p>
+                                <p><strong>전화번호:</strong> ${user.phone}</p>
+                            </div>
+                            <div class="notification-actions">
+                                <button class="approve-btn" onclick="approveRegistration(${idx})">승인</button>
+                                <button class="reject-btn" onclick="rejectRegistration(${idx})">거절</button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            }
+        }
+        
+        function updateNotificationBadge() {
+            const badge = document.getElementById('notificationBadge');
+            if (pendingRegistrations.length > 0) {
+                badge.textContent = pendingRegistrations.length;
+                badge.style.display = 'inline';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+        
+        // 비밀번호 관련 변수
+        let currentPasswordInput = '';
+        let attendancePasswordInput = '';
+        let savedPassword = '0000'; // 초기 비밀번호
+        
+        // 사용자 관리
+        let currentUser = null;
+        let registeredUsers = [
+            {
+                studentId: '2026',
+                name: '이형균',
+                phone: '',
+                password: '0813',
+                isTeacher: true
+            }
+        ];
+        let pendingRegistrations = [];
+        let attendanceChecks = {}; // 출석 체크 상태 {studentId: true/false}
+        
+        // 페이지 로드 시 UI 업데이트
+        updateUI();
+        updateAttendanceList();
+        
+        // 텍스트 입력 이벤트
+        textInput.addEventListener('input', function() {
+            textBox.textContent = this.value || '여기에 텍스트를 입력하세요';
+        });
+        
+        // 설정창 닫기
+        function closeSettings() {
+            controls.classList.remove('active');
+        }
+        
+        function updateUI() {
+            const loginBtn = document.getElementById('loginBtn');
+            const registerBtn = document.getElementById('registerBtn');
+            const welcomeMessage = document.getElementById('welcomeMessage');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const teacherButtons = document.querySelectorAll('.teacher-only');
+            
+            if (currentUser) {
+                // 로그인 상태
+                loginBtn.style.display = 'none';
+                registerBtn.style.display = 'none';
+                welcomeMessage.style.display = 'inline';
+                welcomeMessage.textContent = `${currentUser.name}님 환영합니다.`;
+                logoutBtn.style.display = 'inline-block';
+                
+                // 선생님인 경우
+                if (currentUser.isTeacher) {
+                    teacherButtons.forEach(btn => btn.classList.add('active'));
+                    updateNotificationBadge();
+                }
+            } else {
+                // 로그아웃 상태
+                loginBtn.style.display = 'inline-block';
+                registerBtn.style.display = 'inline-block';
+                welcomeMessage.style.display = 'none';
+                logoutBtn.style.display = 'none';
+                teacherButtons.forEach(btn => btn.classList.remove('active'));
+            }
+        }
+        
+        // 로그아웃
+        function logout() {
+            if (confirm('로그아웃 하시겠습니까?')) {
+                currentUser = null;
+                updateUI();
+                // 설정창이 열려있으면 닫기
+                controls.classList.remove('active');
+            }
+        }
+        
+        // 로그인 모달
+        function openLogin() {
+            document.getElementById('loginOverlay').classList.add('active');
+            document.getElementById('loginStudentId').value = '';
+            document.getElementById('loginName').value = '';
+            document.getElementById('loginPassword').value = '';
+            document.getElementById('loginErrorMessage').textContent = '';
+        }
+        
+        function closeLogin() {
+            document.getElementById('loginOverlay').classList.remove('active');
+        }
+        
+        function login() {
+            const studentId = document.getElementById('loginStudentId').value.trim();
+            const name = document.getElementById('loginName').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const errorMsg = document.getElementById('loginErrorMessage');
+            
+            if (!studentId || !name || !password) {
+                errorMsg.textContent = '모든 항목을 입력해주세요.';
+                return;
+            }
+            
+            const user = registeredUsers.find(u => 
+                u.studentId === studentId && 
+                u.name === name && 
+                u.password === password
+            );
+            
+            if (user) {
+                currentUser = user;
+                closeLogin();
+                updateUI();
+            } else {
+                errorMsg.textContent = '학번, 이름 또는 비밀번호가 일치하지 않습니다.';
+            }
+        }
+        
+        // 사용자 등록 모달
+        function openRegister() {
+            document.getElementById('registerOverlay').classList.add('active');
+            document.getElementById('regStudentId').value = '';
+            document.getElementById('regName').value = '';
+            document.getElementById('regPhone').value = '';
+            document.getElementById('regPassword').value = '';
+            document.getElementById('regConfirmPassword').value = '';
+            document.getElementById('registerErrorMessage').textContent = '';
+        }
+        
+        function closeRegister() {
+            document.getElementById('registerOverlay').classList.remove('active');
+        }
+        
+        function register() {
+            const studentId = document.getElementById('regStudentId').value.trim();
+            const name = document.getElementById('regName').value.trim();
+            const phone = document.getElementById('regPhone').value.trim();
+            const password = document.getElementById('regPassword').value;
+            const confirmPassword = document.getElementById('regConfirmPassword').value;
+            const errorMsg = document.getElementById('registerErrorMessage');
+            
+            if (!studentId || !name || !phone || !password || !confirmPassword) {
+                errorMsg.textContent = '모든 항목을 입력해주세요.';
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                errorMsg.textContent = '비밀번호가 일치하지 않습니다.';
+                return;
+            }
+            
+            // 중복 확인
+            if (registeredUsers.some(u => u.studentId === studentId)) {
+                errorMsg.textContent = '이미 등록된 학번입니다.';
+                return;
+            }
+            
+            if (pendingRegistrations.some(u => u.studentId === studentId)) {
+                errorMsg.textContent = '이미 신청 중인 학번입니다.';
+                return;
+            }
+            
+            // 대기 목록에 추가
+            pendingRegistrations.push({
+                studentId,
+                name,
+                phone,
+                password
+            });
+            
+            updateNotificationBadge();
+            
+            errorMsg.style.color = '#4caf50';
+            errorMsg.textContent = '신청이 완료되었습니다. 승인을 기다려주세요.';
+            
+            setTimeout(() => {
+                closeRegister();
+                errorMsg.style.color = '#ff6b6b';
+            }, 2000);
+        }
+        
+        // 학생 목록 모달
+        function openStudentList() {
+            const content = document.getElementById('studentListContent');
+            
+            if (registeredUsers.length === 0) {
+                content.innerHTML = '<div class="empty-message">등록된 학생이 없습니다.</div>';
+            } else {
+                content.innerHTML = registeredUsers.map(user => `
+                    <div class="student-item">
+                        <div class="student-info">
+                            <strong>학번:</strong> ${user.studentId} 
+                            <strong>이름:</strong> ${user.name}
+                            ${user.isTeacher ? ' <span style="color: #4682B4; font-weight: bold;">(담임)</span>' : ''}
+                        </div>
+                        ${!user.isTeacher ? `<button class="delete-btn" onclick="deleteStudent('${user.studentId}')">삭제</button>` : ''}
+                    </div>
+                `).join('');
+            }
+            
+            document.getElementById('studentListOverlay').classList.add('active');
+        }
+        
+        function closeStudentList() {
+            document.getElementById('studentListOverlay').classList.remove('active');
+        }
+        
+        function deleteStudent(studentId) {
+            if (confirm('정말 이 학생을 삭제하시겠습니까?')) {
+                registeredUsers = registeredUsers.filter(u => u.studentId !== studentId);
+                // 목록 새로고침
+                const content = document.getElementById('studentListContent');
+                if (registeredUsers.length === 0) {
+                    content.innerHTML = '<div class="empty-message">등록된 학생이 없습니다.</div>';
+                } else {
+                    content.innerHTML = registeredUsers.map(user => `
+                        <div class="student-item">
+                            <div class="student-info">
+                                <strong>학번:</strong> ${user.studentId} 
+                                <strong>이름:</strong> ${user.name}
+                                ${user.isTeacher ? ' <span style="color: #4682B4; font-weight: bold;">(담임)</span>' : ''}
+                            </div>
+                            ${!user.isTeacher ? `<button class="delete-btn" onclick="deleteStudent('${user.studentId}')">삭제</button>` : ''}
+                        </div>
+                    `).join('');
+                }
+            }
+        }
+        
+        // 알림 모달
+        function openNotifications() {
+            const content = document.getElementById('notificationContent');
+            
+            if (pendingRegistrations.length === 0) {
+                content.innerHTML = '<div class="empty-message">새로운 신청이 없습니다.</div>';
+            } else {
+                content.innerHTML = pendingRegistrations.map((user, index) => `
+                    <div class="notification-item">
+                        <div class="notification-info">
+                            <p><strong>학번:</strong> ${user.studentId}</p>
+                            <p><strong>이름:</strong> ${user.name}</p>
+                            <p><strong>전화번호:</strong> ${user.phone}</p>
+                        </div>
+                        <div class="notification-actions">
+                            <button class="approve-btn" onclick="approveRegistration(${index})">승인</button>
+                            <button class="reject-btn" onclick="rejectRegistration(${index})">거절</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            document.getElementById('notificationOverlay').classList.add('active');
+        }
+        
+        function closeNotifications() {
+            document.getElementById('notificationOverlay').classList.remove('active');
+        }
+        
+        function approveRegistration(index) {
+            const user = pendingRegistrations[index];
+            registeredUsers.push({
+                studentId: user.studentId,
+                name: user.name,
+                phone: user.phone,
+                password: user.password,
+                isTeacher: false
+            });
+            pendingRegistrations.splice(index, 1);
+            updateNotificationBadge();
+            updateAttendanceList(); // 출석 목록 즉시 업데이트
+            // 목록 새로고침
+            const content = document.getElementById('notificationContent');
+            if (pendingRegistrations.length === 0) {
+                content.innerHTML = '<div class="empty-message">새로운 신청이 없습니다.</div>';
+            } else {
+                content.innerHTML = pendingRegistrations.map((user, idx) => `
+                    <div class="notification-item">
+                        <div class="notification-info">
+                            <p><strong>학번:</strong> ${user.studentId}</p>
+                            <p><strong>이름:</strong> ${user.name}</p>
+                            <p><strong>전화번호:</strong> ${user.phone}</p>
+                        </div>
+                        <div class="notification-actions">
+                            <button class="approve-btn" onclick="approveRegistration(${idx})">승인</button>
+                            <button class="reject-btn" onclick="rejectRegistration(${idx})">거절</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+        
+        function rejectRegistration(index) {
+            if (confirm('이 신청을 거절하시겠습니까?')) {
+                pendingRegistrations.splice(index, 1);
+                updateNotificationBadge();
+                // 목록 새로고침
+                const content = document.getElementById('notificationContent');
+                if (pendingRegistrations.length === 0) {
+                    content.innerHTML = '<div class="empty-message">새로운 신청이 없습니다.</div>';
+                } else {
+                    content.innerHTML = pendingRegistrations.map((user, idx) => `
+                        <div class="notification-item">
+                            <div class="notification-info">
+                                <p><strong>학번:</strong> ${user.studentId}</p>
+                                <p><strong>이름:</strong> ${user.name}</p>
+                                <p><strong>전화번호:</strong> ${user.phone}</p>
+                            </div>
+                            <div class="notification-actions">
+                                <button class="approve-btn" onclick="approveRegistration(${idx})">승인</button>
+                                <button class="reject-btn" onclick="rejectRegistration(${idx})">거절</button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            }
+        }
+        
+        function updateNotificationBadge() {
+            const badge = document.getElementById('notificationBadge');
+            if (pendingRegistrations.length > 0) {
+                badge.textContent = pendingRegistrations.length;
+                badge.style.display = 'inline';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+        
+        // 출석 목록 업데이트
+        function updateAttendanceList() {
+            const listContainer = document.getElementById('attendanceList');
+            const students = registeredUsers.filter(user => !user.isTeacher);
+            
+            // 학번 순서로 정렬 (숫자가 작은 순)
+            students.sort((a, b) => {
+                const idA = parseInt(a.studentId) || 0;
+                const idB = parseInt(b.studentId) || 0;
+                return idA - idB;
+            });
+            
+            if (students.length === 0) {
+                listContainer.innerHTML = '<div class="empty-message">등록된 학생이 없습니다.</div>';
+                return;
+            }
+            
+            listContainer.innerHTML = students.map(user => `
+                <div class="attendance-item">
+                    <div class="attendance-info">
+                        <strong>학번:</strong> ${user.studentId} <strong>이름:</strong> ${user.name}
+                    </div>
+                    <input type="checkbox" class="attendance-checkbox" 
+                           ${attendanceChecks[user.studentId] ? 'checked' : ''} 
+                           ${currentUser && currentUser.isTeacher ? '' : 'disabled'}
+                           onchange="toggleAttendance('${user.studentId}')">
+                </div>
+            `).join('');
+            
+            // 날짜 업데이트
+            updateAttendanceDate();
+        }
+        
+        // 출석 날짜 업데이트
+        function updateAttendanceDate() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const dateString = `${year}년 ${month}월 ${day}일`;
+            
+            const titleElement = document.querySelector('.attendance-title');
+            titleElement.textContent = `📋 출석 체크 - ${dateString}`;
+        }
+        
+        // 출석하기 버튼
+        function checkAttendance() {
+            if (!currentUser) {
+                alert('로그인이 필요합니다.');
+                return;
+            }
+            
+            attendanceChecks[currentUser.studentId] = true;
+            updateAttendanceList();
+            alert('출석 체크가 완료되었습니다!');
+        }
+        
+        // 출석 토글 (선생님 전용)
+        function toggleAttendance(studentId) {
+            if (currentUser && currentUser.isTeacher) {
+                attendanceChecks[studentId] = !attendanceChecks[studentId];
+                updateAttendanceList();
+            }
+        }
+        
+        // 출석 설정 토글
+        function toggleAttendanceSettings() {
+            openAttendanceKeypad();
+        }
+        
+        // 출석 키패드 열기
+        function openAttendanceKeypad() {
+            attendancePasswordInput = '';
+            updateAttendancePasswordDisplay();
+            document.getElementById('attendanceErrorMessage').textContent = '';
+            document.getElementById('attendanceKeypadOverlay').classList.add('active');
+        }
+        
+        // 출석 키패드 닫기
+        function closeAttendanceKeypad() {
+            document.getElementById('attendanceKeypadOverlay').classList.remove('active');
+            attendancePasswordInput = '';
+        }
+        
+        // 출석 숫자 입력
+        function addAttendanceDigit(digit) {
+            if (attendancePasswordInput.length < 4) {
+                attendancePasswordInput += digit;
+                updateAttendancePasswordDisplay();
+                
+                if (attendancePasswordInput.length === 4) {
+                    setTimeout(checkAttendancePassword, 300);
+                }
+            }
+        }
+        
+        // 출석 비밀번호 표시 업데이트
+        function updateAttendancePasswordDisplay() {
+            const dots = document.querySelectorAll('#attendancePasswordDisplay .dot');
+            dots.forEach((dot, index) => {
+                if (index < attendancePasswordInput.length) {
+                    dot.classList.add('filled');
+                } else {
+                    dot.classList.remove('filled');
+                }
+            });
+        }
+        
+        // 출석 비밀번호 확인
+        function checkAttendancePassword() {
+            if (attendancePasswordInput === savedPassword) {
+                closeAttendanceKeypad();
+                openAttendanceSettings();
+                attendancePasswordInput = '';
+            } else {
+                document.getElementById('attendanceErrorMessage').textContent = '비밀번호가 틀렸습니다.';
+                setTimeout(() => {
+                    attendancePasswordInput = '';
+                    updateAttendancePasswordDisplay();
+                    document.getElementById('attendanceErrorMessage').textContent = '';
+                }, 1500);
+            }
+        }
+        
+        // 출석 비밀번호 지우기
+        function clearAttendancePassword() {
+            attendancePasswordInput = '';
+            updateAttendancePasswordDisplay();
+            document.getElementById('attendanceErrorMessage').textContent = '';
+        }
+        
+        // 출석 설정 모달 열기
+        function openAttendanceSettings() {
+            document.getElementById('attendanceSettingsOverlay').classList.add('active');
+        }
+        
+        // 출석 설정 모달 닫기
+        function closeAttendanceSettings() {
+            document.getElementById('attendanceSettingsOverlay').classList.remove('active');
+        }
+        
+        // 출석 박스 설정 변경
+        const attendanceBox = document.getElementById('attendanceBox');
+        const attendanceWidth = document.getElementById('attendanceWidth');
+        const attendanceHeight = document.getElementById('attendanceHeight');
+        const attendanceBgColor = document.getElementById('attendanceBgColor');
+        
+        attendanceWidth.addEventListener('input', function() {
+            attendanceBox.style.width = this.value + '%';
+        });
+        
+        attendanceHeight.addEventListener('input', function() {
+            attendanceBox.style.minHeight = this.value + 'px';
+        });
+        
+        attendanceBgColor.addEventListener('input', function() {
+            attendanceBox.style.backgroundColor = this.value;
+        });
+
+
+        
+        // 설정창 토글 (비밀번호 확인 필요)
+        function toggleSettings() {
+            if (controls.classList.contains('active')) {
+                // 이미 열려있으면 닫기
+                controls.classList.remove('active');
+            } else {
+                // 열려고 하면 비밀번호 확인
+                openKeypad();
+            }
+        }
+        
+        // 키패드 열기
+        function openKeypad() {
+            currentPasswordInput = '';
+            updatePasswordDisplay();
+            document.getElementById('errorMessage').textContent = '';
+            document.getElementById('keypadOverlay').classList.add('active');
+        }
+        
+        // 키패드 닫기
+        function closeKeypad() {
+            document.getElementById('keypadOverlay').classList.remove('active');
+            currentPasswordInput = '';
+        }
+        
+        // 숫자 입력
+        function addDigit(digit) {
+            if (currentPasswordInput.length < 4) {
+                currentPasswordInput += digit;
+                updatePasswordDisplay();
+                
+                // 4자리가 입력되면 자동으로 확인
+                if (currentPasswordInput.length === 4) {
+                    setTimeout(checkPassword, 300);
+                }
+            }
+        }
+        
+        // 비밀번호 표시 업데이트
+        function updatePasswordDisplay() {
+            const dots = document.querySelectorAll('#passwordDisplay .dot');
+            dots.forEach((dot, index) => {
+                if (index < currentPasswordInput.length) {
+                    dot.classList.add('filled');
+                } else {
+                    dot.classList.remove('filled');
+                }
+            });
+        }
+        
+        // 비밀번호 확인
+        function checkPassword() {
+            if (currentPasswordInput === savedPassword) {
+                // 비밀번호 맞음
+                closeKeypad();
+                controls.classList.add('active');
+                currentPasswordInput = '';
+            } else {
+                // 비밀번호 틀림
+                document.getElementById('errorMessage').textContent = '비밀번호가 틀렸습니다.';
+                setTimeout(() => {
+                    currentPasswordInput = '';
+                    updatePasswordDisplay();
+                    document.getElementById('errorMessage').textContent = '';
+                }, 1500);
+            }
+        }
+        
+        // 비밀번호 지우기
+        function clearPassword() {
+            currentPasswordInput = '';
+            updatePasswordDisplay();
+            document.getElementById('errorMessage').textContent = '';
+        }
+        
+        // 비밀번호 설정 모달 열기
+        function openPasswordSettings() {
+            document.getElementById('passwordSettingsOverlay').classList.add('active');
+            document.getElementById('currentPassword').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+            document.getElementById('settingsErrorMessage').textContent = '';
+        }
+        
+        // 비밀번호 설정 모달 닫기
+        function closePasswordSettings() {
+            document.getElementById('passwordSettingsOverlay').classList.remove('active');
+        }
+        
+        // 비밀번호 변경
+        function changePassword() {
+            const currentPwd = document.getElementById('currentPassword').value;
+            const newPwd = document.getElementById('newPassword').value;
+            const confirmPwd = document.getElementById('confirmPassword').value;
+            const errorMsg = document.getElementById('settingsErrorMessage');
+            
+            // 검증
+            if (currentPwd !== savedPassword) {
+                errorMsg.textContent = '현재 비밀번호가 일치하지 않습니다.';
+                return;
+            }
+            
+            if (newPwd.length !== 4) {
+                errorMsg.textContent = '새 비밀번호는 4자리 숫자여야 합니다.';
+                return;
+            }
+            
+            if (!/^\d{4}$/.test(newPwd)) {
+                errorMsg.textContent = '비밀번호는 숫자만 입력 가능합니다.';
+                return;
+            }
+            
+            if (newPwd !== confirmPwd) {
+                errorMsg.textContent = '새 비밀번호가 일치하지 않습니다.';
+                return;
+            }
+            
+            // 비밀번호 변경 성공
+            savedPassword = newPwd;
+            errorMsg.style.color = '#4caf50';
+            errorMsg.textContent = '비밀번호가 성공적으로 변경되었습니다!';
+            
+            setTimeout(() => {
+                closePasswordSettings();
+                errorMsg.style.color = '#ff6b6b';
+            }, 1500);
+        }
+
+        
+        // 글꼴 변경
+        fontFamily.addEventListener('change', function() {
+            textBox.style.fontFamily = this.value;
+        });
+        
+        // 텍스트 크기 변경
+        fontSize.addEventListener('input', function() {
+            textBox.style.fontSize = this.value + 'px';
+        });
+        
+        // 텍스트 색상 변경
+        textColor.addEventListener('input', function() {
+            textBox.style.color = this.value;
+        });
+        
+        // 텍스트 정렬 변경
+        textAlign.addEventListener('change', function() {
+            textBox.style.textAlign = this.value;
+        });
+        
+        // 텍스트 굵기 변경
+        fontWeight.addEventListener('change', function() {
+            textBox.style.fontWeight = this.value;
+        });
+        
+        // 박스 너비 변경
+        boxWidth.addEventListener('input', function() {
+            headerBox.style.width = this.value + '%';
+        });
+        
+        // 박스 높이 변경
+        boxHeight.addEventListener('input', function() {
+            headerBox.style.minHeight = this.value + 'px';
+        });
+        
+        // 배경색 변경
+        bgColor.addEventListener('input', function() {
+            headerBox.style.backgroundColor = this.value;
+        });
+        
+        // 기본값으로 초기화
+        function resetStyles() {
+            fontFamily.value = "'Malgun Gothic', sans-serif";
+            fontSize.value = 24;
+            textColor.value = "#333333";
+            textAlign.value = "left";
+            boxWidth.value = 100;
+            boxHeight.value = 150;
+            bgColor.value = "#87CEEB";
+            
+            textBox.style.fontFamily = "'Malgun Gothic', sans-serif";
+            textBox.style.fontSize = "24px";
+            textBox.style.color = "#333333";
+            textBox.style.textAlign = "left";
+            headerBox.style.width = "100%";
+            headerBox.style.minHeight = "150px";
+            headerBox.style.backgroundColor = "#87CEEB";
+        }
+    </script>
+</body>
+</html>
